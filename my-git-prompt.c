@@ -1,90 +1,87 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <git2.h>
 
-const char* get_name(const char* string);
-char get_commit_status(char state);
+typedef struct {
+	unsigned index_any;
+	unsigned index_new;
+	unsigned wt_modified;
+	unsigned wt_deleted;
+} my_status_t;
 
-int main(void)
-{
-	size_t n = 0;
-	ssize_t sz = 0;
-	char *lineptr = NULL;
-	const char *branch_name = NULL;
-	char commit_status = '\0';
-
-	size_t staged[256] = {};
-	size_t unstaged[256]  = {};
-
-	while ((sz = getline(&lineptr, &n, stdin)) != EOF)
+int my_status_cb(const char* path, unsigned int flags, void* payload) {
+	(void) path;
+	my_status_t* my_status = payload;
+	if (flags & (GIT_STATUS_INDEX_NEW
+		| GIT_STATUS_INDEX_DELETED
+		| GIT_STATUS_INDEX_MODIFIED
+		| GIT_STATUS_INDEX_RENAMED
+		| GIT_STATUS_INDEX_TYPECHANGE))
 	{
-		if (sz > 0) lineptr[sz - 1] = '\0';
-		switch (lineptr[0])
-		{
-		case '#': {
-			if (! branch_name) {
-				const char* name = get_name(lineptr);
-				if (name) {
-					branch_name = name;
-				}
-			}
-			break;
-		}
-		case '?': break;
-		case '!': break;
-		case '1':
-		case '2': {
-			if (sz <= 4) continue;
-			staged[(unsigned)lineptr[2]]++;
-			unstaged[(unsigned)lineptr[3]]++;
-			if (! commit_status)
-			{
-				commit_status = get_commit_status(lineptr[2]);
-			}
-		}
-		}
+		my_status->index_any = 1;
 	}
+	if (flags & GIT_STATUS_INDEX_NEW)
+	{
+		my_status->index_new++;
+	}
+	if (flags & GIT_STATUS_WT_MODIFIED)
+	{
+		my_status->wt_modified++;
+	}
+	if (flags & GIT_STATUS_WT_DELETED)
+	{
+		my_status->wt_deleted++;
+	}
+	return 0;
+}
+
+
+int main(int argc, char** argv)
+{
+	int result = 0;
+	git_repository *repo = NULL;
+	git_reference *ref = NULL;
+	const char* branch_name = NULL;
+	const char* path = ".";
+
+	if (argc == 2) path = argv[1];
+
+	git_libgit2_init();
+
+	result = git_repository_open_ext(&repo, path, 0, NULL);
+	if (result != 0) return EXIT_SUCCESS;
+
+	result = git_reference_dwim(&ref, repo, "HEAD");
+	if (result != 0) return EXIT_SUCCESS;
+
+	result = git_branch_name(&branch_name, ref);
+	if (result != 0) return EXIT_SUCCESS;
+
+	my_status_t my_status = {};
+	git_status_foreach(repo, &my_status_cb, &my_status);
+
 #define ZSH_RED     "%%F{r}"
 #define ZSH_GREEN   "%%F{g}"
 #define ZSH_BLUE    "%%F{blu}"
-#define ZSH_UNCOLOR "%%f"
-#define ZSH_BOLD    "%%B"
-#define ZSH_UNBOLD  "%%b"
-	if (! branch_name)
+#define ZSH_UNCOLOR "%f"
+#define ZSH_BOLD    "%B"
+#define ZSH_UNBOLD  "%b"
+	fputs(ZSH_BOLD, stdout);
+	fputc(my_status.index_any ? '+' : ' ', stdout);
+	fputs(branch_name, stdout);
+	if (my_status.index_new | my_status.wt_modified | my_status.wt_deleted)
 	{
-		return EXIT_SUCCESS;
+		fputc(' ', stdout);
+		if (my_status.wt_deleted) {
+			printf(ZSH_RED "%u",   my_status.wt_deleted);
+		}
+		if (my_status.wt_modified) {
+			printf(ZSH_BLUE "%u",  my_status.wt_modified);
+		}
+		if (my_status.index_new) {
+			printf(ZSH_GREEN "%u", my_status.index_new);
+		}
+		fputs(ZSH_UNCOLOR, stdout);
 	}
-
-	printf(ZSH_BOLD);
-	printf("%c", commit_status ? commit_status : ' ');
-	printf("%s", branch_name);
-	int status = unstaged['D'] || unstaged['M'] || staged['A'];
-	if (status) printf(" ");
-	if (unstaged['D']) printf(ZSH_RED   "%ld", unstaged['D']);
-	if (unstaged['M']) printf(ZSH_BLUE  "%ld", unstaged['M']);
-	if (  staged['A']) printf(ZSH_GREEN "%ld",   staged['A']);
-	if (status) printf(ZSH_UNCOLOR);
-	printf(ZSH_UNBOLD);
-
-	return EXIT_SUCCESS;
-}
-
-const char* get_name(const char* string)
-{
-	const char *s = "# branch.head ";
-	if (strncmp(string, s, strlen(s)) == 0) {
-		return strdup(string + strlen(s));
-	}
-	return NULL;
-}
-
-char get_commit_status(char state)
-{
-	switch (state)
-	{
-	case '.':
-	case '!':
-	case '?': return '\0';
-	default: return  '+';
-	}
+	fputs(ZSH_UNBOLD, stdout);
 }

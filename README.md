@@ -1,19 +1,16 @@
 My simple git prompt in C.
 
+Depends on libgit2
+
 # Usage
 ```
-git status -sb --porcelain=v2 2>/dev/null | my-git-prompt
+my-git-prompt [PATH:defaults to .]
 
 +master 123
 ^  ^    ^^^
 |  |    ||+-- Staged added files (in green)
 |  |    |+--- Unstaged modified files (in blue)
 |  |    +---- Unstaged deleted files (in red)
-|  +--------- Branch name (in bold)
-+------------ + if there are staged files to be commited, space otherwise
+|  +--------- Branch name
++------------ shows + if there are staged files to be commited
 ```
-
-
-
-
-

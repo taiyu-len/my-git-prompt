@@ -1,13 +1,17 @@
 CFLAGS=-Wall -Wextra -Os
+LDLIBS=-lgit2
 PREFIX?=/usr/local
 
-my-git-prompt: my-git-prompt.c
+src=my-git-prompt.c
+tgt=$(src:.c=)
 
+all: $(tgt)
 clean:
-	rm my-git-prompt
+	rm $(tgt)
 
-install: my-git-prompt
-	@echo :: installing 'my-git-prompt' to $(PREFIX)/bin/
-	install -m 755 my-git-prompt $(PREFIX)/bin/my-git-prompt
+install: $(PREFIX)/bin/$(tgt)
+$(PREFIX)/bin/% : %
+	@echo :: installing '$^' to $(PREFIX)/bin/
+	install -Tm 755 "$^" "$@"
 
 .PHONY: clean install
