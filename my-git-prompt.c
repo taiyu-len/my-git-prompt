@@ -38,7 +38,7 @@ int my_status_cb(const char* path, unsigned int flags, void* payload) {
 
 int main(int argc, char** argv)
 {
-	int result = 0;
+	int unborn = 0;
 	git_repository *repo = NULL;
 	git_reference *ref = NULL;
 	const char* branch_name = NULL;
@@ -48,17 +48,28 @@ int main(int argc, char** argv)
 
 	git_libgit2_init();
 
-	result = git_repository_open_ext(&repo, path, 0, NULL);
-	if (result != 0) return EXIT_SUCCESS;
-
-	result = git_reference_dwim(&ref, repo, "HEAD");
-	if (result != 0) return EXIT_SUCCESS;
-
-	result = git_branch_name(&branch_name, ref);
-	if (result != 0) return EXIT_SUCCESS;
+	if (git_repository_open_ext(&repo, path, 0, NULL)) {
+		return EXIT_SUCCESS;
+	}
 
 	my_status_t my_status = {};
 	git_status_foreach(repo, &my_status_cb, &my_status);
+
+	switch (git_repository_head(&ref, repo)) {
+	case 0: break;
+	case GIT_EUNBORNBRANCH:
+		unborn = 1;
+		break;
+	default: return EXIT_SUCCESS;
+	}
+
+	if (unborn) {
+		branch_name = "(new)";
+	} else {
+		if (git_branch_name(&branch_name, ref)) {
+			return EXIT_SUCCESS;
+		}
+	}
 
 #define ZSH_RED     "%%F{r}"
 #define ZSH_GREEN   "%%F{g}"

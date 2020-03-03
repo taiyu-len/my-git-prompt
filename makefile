@@ -6,6 +6,7 @@ src=my-git-prompt.c
 tgt=$(src:.c=)
 
 all: $(tgt)
+show-git-status: show-git-status.c
 clean:
 	rm $(tgt)
 
