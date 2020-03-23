@@ -57,12 +57,17 @@ int main(int argc, char **argv)
 
 	if (unborn) {
 		printf("## empty branch\n");
-	} else {
-		if (git_branch_name(&branch_name, ref)) {
-			git_perror("branch_name");
-			return 1;
-		}
+	} else if (!git_branch_name(&branch_name, ref)) {
 		printf("## %s\n", branch_name);
+	} else {
+		char str[GIT_OID_HEXSZ+1];
+		git_annotated_commit* commit;
+		const git_oid* id;
+		if (!git_annotated_commit_from_ref(&commit, repo, ref)) {
+			id = git_annotated_commit_id(commit);
+			git_oid_tostr(str, GIT_OID_HEXSZ+1, id);
+			printf("## commit %s\n", str);
+		}
 	}
 
 	git_status_foreach(repo, &my_status_cb, NULL);

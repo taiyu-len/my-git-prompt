@@ -43,6 +43,8 @@ int main(int argc, char** argv)
 	git_reference *ref = NULL;
 	const char* branch_name = NULL;
 	const char* path = ".";
+#define COMMIT_NAME_SIZE 8
+	char commit_name_buf[COMMIT_NAME_SIZE];
 
 	if (argc == 2) path = argv[1];
 
@@ -65,10 +67,13 @@ int main(int argc, char** argv)
 
 	if (unborn) {
 		branch_name = "(new)";
+	} else if (!git_branch_name(&branch_name, ref)) {
+		// NOOP: branch_name is set if this is entered
 	} else {
-		if (git_branch_name(&branch_name, ref)) {
-			return EXIT_SUCCESS;
-		}
+		git_annotated_commit* commit;
+		git_annotated_commit_from_ref(&commit, repo, ref);
+		const git_oid* id = git_annotated_commit_id(commit);
+		branch_name = git_oid_tostr(commit_name_buf, COMMIT_NAME_SIZE, id);
 	}
 
 #define ZSH_RED     "%%F{r}"
