@@ -7,6 +7,7 @@ typedef struct {
 	unsigned index_new;
 	unsigned wt_modified;
 	unsigned wt_deleted;
+	unsigned conflict;
 } my_status_t;
 
 int my_status_cb(const char* path, unsigned int flags, void* payload) {
@@ -16,7 +17,8 @@ int my_status_cb(const char* path, unsigned int flags, void* payload) {
 		| GIT_STATUS_INDEX_DELETED
 		| GIT_STATUS_INDEX_MODIFIED
 		| GIT_STATUS_INDEX_RENAMED
-		| GIT_STATUS_INDEX_TYPECHANGE))
+		| GIT_STATUS_INDEX_TYPECHANGE
+		| GIT_STATUS_CONFLICTED))
 	{
 		my_status->index_any = 1;
 	}
@@ -31,6 +33,10 @@ int my_status_cb(const char* path, unsigned int flags, void* payload) {
 	if (flags & GIT_STATUS_WT_DELETED)
 	{
 		my_status->wt_deleted++;
+	}
+	if (flags & GIT_STATUS_CONFLICTED)
+	{
+		my_status->conflict++;
 	}
 	return 0;
 }
@@ -76,6 +82,7 @@ int main(int argc, char** argv)
 		branch_name = git_oid_tostr(commit_name_buf, COMMIT_NAME_SIZE, id);
 	}
 
+#define ZSH_MAGENTA "%%F{m}"
 #define ZSH_RED     "%%F{r}"
 #define ZSH_GREEN   "%%F{g}"
 #define ZSH_BLUE    "%%F{blu}"
@@ -85,11 +92,14 @@ int main(int argc, char** argv)
 	fputs(ZSH_BOLD, stdout);
 	fputc(my_status.index_any ? '+' : ' ', stdout);
 	fputs(branch_name, stdout);
-	if (my_status.index_new | my_status.wt_modified | my_status.wt_deleted)
+	if (my_status.index_new | my_status.wt_modified | my_status.wt_deleted | my_status.conflict)
 	{
 		fputc(' ', stdout);
 		if (my_status.wt_deleted) {
 			printf(ZSH_RED "%u",   my_status.wt_deleted);
+		}
+		if (my_status.conflict) {
+			printf(ZSH_MAGENTA "%u", my_status.conflict);
 		}
 		if (my_status.wt_modified) {
 			printf(ZSH_BLUE "%u",  my_status.wt_modified);
