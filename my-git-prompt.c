@@ -87,9 +87,6 @@ int main(int argc, char** argv)
 #define ZSH_GREEN   "%%F{g}"
 #define ZSH_BLUE    "%%F{blu}"
 #define ZSH_UNCOLOR "%f"
-#define ZSH_BOLD    "%B"
-#define ZSH_UNBOLD  "%b"
-	fputs(ZSH_BOLD, stdout);
 	fputc(my_status.index_any ? '+' : ' ', stdout);
 	fputs(branch_name, stdout);
 	if (my_status.index_new | my_status.wt_modified | my_status.wt_deleted | my_status.conflict)
@@ -109,5 +106,4 @@ int main(int argc, char** argv)
 		}
 		fputs(ZSH_UNCOLOR, stdout);
 	}
-	fputs(ZSH_UNBOLD, stdout);
 }
